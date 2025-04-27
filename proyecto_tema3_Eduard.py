@@ -15,10 +15,10 @@ CREATE TABLE IF NOT EXISTS users (
 ''')
 
 cursor_main.execute('''
-CREATE TABLE IF NOT EXISTS medical_centers (
+CREATE TABLE IF NOT EXISTS doctors (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
-    address TEXT NOT NULL,
+    specialty TEXT NOT NULL,
     contact TEXT NOT NULL
 )
 ''')
@@ -45,14 +45,16 @@ CREATE TABLE IF NOT EXISTS reported_issues (
 conn_main.commit()
 conn_reports.commit()
 
-AUTH_KEY = "mi_secreta_clave"
+AUTH_KEY = "12345"
+
+def authenticate():
+    auth_key = input("Ingrese la clave de autenticación para acceder: ")
+    return auth_key == AUTH_KEY
 
 def add_user():
     print("=== Registro de Usuario ===")
-    auth_key = input("Ingrese la clave de autenticación: ")
-    
-    if auth_key != AUTH_KEY:
-        print("Error: Clave incorrecta, no puedes agregar usuarios.")
+    if not authenticate():
+        print("Error: Clave incorrecta, acceso denegado.")
         return
 
     username = input("Ingrese su nombre de usuario: ")
@@ -65,32 +67,55 @@ def add_user():
     except sqlite3.IntegrityError:
         print("Error: El nombre de usuario ya existe.")
 
-def make_request():
-    print("=== Solicitud de Servicio Médico ===")
-    user_id = int(input("Ingrese su ID de usuario: "))
-    request_type = input("Tipo de solicitud (Ej: Cita médica, Emergencia): ")
-    details = input("Detalles adicionales: ")
-    problem_desc = input("Descripción del problema: ")
-
-    if request_type.lower() == "cita médica" and details:
-        cursor_main.execute("INSERT INTO requests (user_id, request_type, details) VALUES (?, ?, ?)", (user_id, request_type, details))
-        conn_main.commit()
-        print("Solicitud de cita médica registrada exitosamente.")
-    elif request_type.lower() == "emergencia":
-        print("¡Se ha registrado una emergencia! Se notificará a los servicios médicos.")
-        cursor_main.execute("INSERT INTO requests (user_id, request_type, details) VALUES (?, ?, ?)", (user_id, request_type, "Emergencia médica"))
-        conn_main.commit()
-    else:
-        print("Tipo de solicitud no válida.")
+def get_users():
+    print("=== Consulta de Usuarios ===")
+    if not authenticate():
+        print("Error: Clave incorrecta, acceso denegado.")
         return
 
-    if problem_desc:
-        cursor_reports.execute("INSERT INTO reported_issues (user_id, problem_description) VALUES (?, ?)", (user_id, problem_desc))
-        conn_reports.commit()
-        print("El problema ha sido reportado en la base de datos de incidencias.")
+    cursor_main.execute("SELECT * FROM users")
+    users = cursor_main.fetchall()
+
+    if users:
+        print("\n=== Usuarios Registrados ===")
+        for user in users:
+            print(f"ID: {user[0]}, Nombre de usuario: {user[1]}")
+    else:
+        print("No hay usuarios registrados.")
+
+def add_doctor():
+    print("=== Ingrese la clave de autenticacion para acceder ===")
+    if not authenticate():
+        print("Error: Clave incorrecta, acceso denegado.")
+        return
+    
+    print("=== Registro de Médico ===")
+    name = input("Ingrese el nombre del médico: ")
+    specialty = input("Ingrese la especialidad: ")
+    contact = input("Ingrese el contacto: ")
+
+    cursor_main.execute("INSERT INTO doctors (name, specialty, contact) VALUES (?, ?, ?)", (name, specialty, contact))
+    conn_main.commit()
+    print("Médico agregado exitosamente.")
+
+def get_doctors():
+    print("\n=== Médicos Registrados ===")
+    cursor_main.execute("SELECT * FROM doctors")
+    doctors = cursor_main.fetchall()
+
+    if doctors:
+        for doc in doctors:
+            print(f"ID: {doc[0]}, Nombre: {doc[1]}, Especialidad: {doc[2]}, Contacto: {doc[3]}")
+    else:
+        print("No hay médicos registrados.")
 
 def get_requests():
-    user_id = int(input("Ingrese su ID de usuario para ver sus solicitudes: "))
+    print("=== Consulta de Solicitudes Médicas ===")
+    if not authenticate():
+        print("Error: Clave incorrecta, acceso denegado.")
+        return
+
+    user_id = int(input("Ingrese su ID de usuario: "))
     cursor_main.execute("SELECT * FROM requests WHERE user_id = ?", (user_id,))
     requests = cursor_main.fetchall()
 
@@ -102,6 +127,11 @@ def get_requests():
         print("No hay solicitudes registradas.")
 
 def get_reported_issues():
+    print("=== Consulta de Problemas Reportados ===")
+    if not authenticate():
+        print("Error: Clave incorrecta, acceso denegado.")
+        return
+
     user_id = int(input("Ingrese su ID de usuario para ver problemas reportados: "))
     cursor_reports.execute("SELECT * FROM reported_issues WHERE user_id = ?", (user_id,))
     issues = cursor_reports.fetchall()
@@ -117,22 +147,28 @@ print("\n=== Bienvenido al Sistema de Servicios Médicos ===")
 while True:
     print("\nOpciones:")
     print("1. Agregar usuario")
-    print("2. Realizar solicitud médica y reportar problema")
-    print("3. Ver solicitudes registradas")
-    print("4. Ver problemas reportados")
-    print("5. Salir")
+    print("2. Ver usuarios registrados (requiere autenticación)")
+    print("3. Agregar médico")
+    print("4. Ver médicos registrados (NO requiere autenticación)")
+    print("5. Ver solicitudes médicas (requiere autenticación)")
+    print("6. Ver problemas reportados (requiere autenticación)")
+    print("7. Salir")
 
     option = input("Seleccione una opción: ")
 
     if option == "1":
         add_user()
     elif option == "2":
-        make_request()
+        get_users()
     elif option == "3":
-        get_requests()
+        add_doctor()
     elif option == "4":
-        get_reported_issues()
+        get_doctors()
     elif option == "5":
+        get_requests()
+    elif option == "6":
+        get_reported_issues()
+    elif option == "7":
         print("Saliendo del sistema. Hasta luego.")
         break
     else:
