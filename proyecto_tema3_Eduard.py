@@ -1,9 +1,9 @@
 import sqlite3
 
-conn_main = sqlite3.connect('medical_services.db')
+conn_main = sqlite3.connect('servicios_medicos.db')
 cursor_main = conn_main.cursor()
 
-conn_reports = sqlite3.connect('reported_issues.db')
+conn_reports = sqlite3.connect('reporte_inusuales.db')
 cursor_reports = conn_reports.cursor()
 
 cursor_main.execute('''
